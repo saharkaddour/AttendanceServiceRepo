@@ -4,7 +4,7 @@ spring:
     name: attendance-service
   data:
     mongodb:
-      uri: mongodb+srv://sahargaddour:S@har2001@attendance.qy4rocp.mongodb.net/?retryWrites=true&w=majority&appName=Attendance
+      uri: mongodb+srv://sahargaddour:S%40har2001@attendance.qy4rocp.mongodb.net/?retryWrites=true&w=majority&appName=Attendance
 
 server:
   port: 8088
@@ -19,4 +19,4 @@ management:
     health:
       show-details: "always" # Show full health details (e.g., MongoDB status, disk space)
     metrics:
-      enabled: true # Ensure metrics are enabled (usually true by default)
+      access: full # Ensure metrics are enabled (usually true by default)
