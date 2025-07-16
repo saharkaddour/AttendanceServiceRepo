@@ -1,0 +1,22 @@
+
+spring:
+  application:
+    name: attendance-service
+  data:
+    mongodb:
+      uri: mongodb+srv://sahargaddour:S%40har2001%40attendance.qy4rocp.mongodb.net/?retryWrites=true&w=majority&appName=Attendance
+
+server:
+  port: 8088
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # include: "health,info,metrics" # Expose health, info, and metrics endpoints
+        include: "*" # Alternatively, to expose ALL available endpoints (use with caution in production)
+  endpoint:
+    health:
+      show-details: "always" # Show full health details (e.g., MongoDB status, disk space)
+    metrics:
+      access: full # Ensure metrics are enabled (usually true by default)
