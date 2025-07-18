@@ -152,7 +152,7 @@ pipeline {
         bat "wsl docker network rm ${DOCKER_NETWORK_NAME} || exit 0"
         echo 'Docker cleanup complete.'
     }
-}
+
         success {
             echo '✅ Pipeline completed successfully!'
         }
@@ -160,3 +160,4 @@ pipeline {
             echo '❌ Pipeline failed.'
         }
     }
+}
