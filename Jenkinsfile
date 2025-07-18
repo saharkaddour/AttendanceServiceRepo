@@ -32,21 +32,21 @@ pipeline {
     }
 
     stages {
-        stage('Checkout Code') {
+        stage('Checkout') {
             steps {
                 // Clone le dépôt Git. Tous les fichiers (code, Jenkinsfile, .jmx) seront dans ${WORKSPACE}
                 git credentialsId: 'github-token', url: 'https://github.com/saharkaddour/AttendanceServiceRepo.git', branch: 'saharkaddour-V-1'
             }
         }
 
-        stage('Clean Project') {
+        stage('Clean') {
             steps {
                 // Nettoie le projet Maven
                 bat 'mvnw.cmd clean'
             }
         }
 
-        stage('Compile Project') {
+        stage('Compile') {
             steps {
                 // Compile le code source du projet
                 bat 'mvnw.cmd compile'
@@ -62,7 +62,7 @@ pipeline {
             }
         }
 
-        stage('Run Unit Tests') {
+        stage('Tests') {
             steps {
                 // Exécute les tests unitaires
                 bat 'mvnw.cmd test'
@@ -77,7 +77,7 @@ pipeline {
             }
         }
 
-        stage('Package Application') {
+        stage('Package') {
             steps {
                 // Crée le fichier JAR exécutable
                 bat 'mvnw.cmd package'
@@ -88,9 +88,18 @@ pipeline {
 
         stage('Setup Docker Network') {
             steps {
-                // Crée un réseau Docker pour que le backend et JMeter puissent communiquer
-                // '|| true' permet à la commande de ne pas échouer si le réseau existe déjà
-                bat "wsl docker network create ${DOCKER_NETWORK_NAME} || true"
+
+                try {
+                    wsl.exe docker network create jmeter-test-network
+                    }
+                catch {
+                    if ($_.Exception.Message -like "*network with name jmeter-test-network already exists*") {
+                        Write-Host "JMeter test network already exists. Continuing..."
+                    }
+                    else {
+                        throw $_
+                    }
+                }
             }
         }
 
@@ -101,22 +110,8 @@ pipeline {
                     // VÉRIFIEZ LE NOM EXACT DE VOTRE FICHIER JAR !
                     def jarPath = "${WORKSPACE}\\target\\attendance-service-0.0.1-SNAPSHOT.jar"
 
-                    // Lance le conteneur Docker pour le backend Spring Boot
-                    // -d : détache le conteneur (s'exécute en arrière-plan)
-                    // --rm : supprime le conteneur après son arrêt
-                    // --network : connecte le conteneur au réseau Docker créé
-                    // -p 8088:8088 : mappe le port 8088 du conteneur au port 8088 de l'hôte Windows
-                    // -v : monte le JAR de l'hôte Windows dans le conteneur
-                    bat """
-                        wsl docker run -d --rm \\
-                        --name ${SPRING_BOOT_APP_NAME} \\
-                        --network ${DOCKER_NETWORK_NAME} \\
-                        -p 8088:8088 \\
-                        -v "${jarPath}:/app.jar" \\
-                        openjdk:17-jdk-slim java -jar /app.jar
-                    """
-                    // Attendre que le backend soit complètement démarré et prêt à recevoir des requêtes
-                    // Un simple 'sleep' est utilisé ici, mais un 'health check' serait plus robuste en production
+                    bat "wsl docker run -d --rm --name \"${SPRING_BOOT_APP_NAME}\" --network \"${DOCKER_NETWORK_NAME}\" -p 8088:8088 -v \"${jarPath}:/app.jar\" openjdk:17-jdk-slim java -jar /app.jar"
+
                     echo "Waiting for Spring Boot backend to start..."
                     sleep time: 30, unit: 'SECONDS'
                     echo "Spring Boot backend should be up."
@@ -127,28 +122,7 @@ pipeline {
         stage('Run JMeter Performance Tests') {
             steps {
                 script {
-                    // Lance le conteneur JMeter en mode non-GUI
-                    // -v "${WORKSPACE}:${JMeter_WORKSPACE_CONTAINER}" : Monte l'espace de travail Jenkins (Windows)
-                    //                                                dans le conteneur Docker JMeter à /jenkins_workspace
-                    // -n : mode non-GUI
-                    // -t : chemin vers le plan de test (.jmx) à l'intérieur du conteneur
-                    // -l : chemin vers le fichier de résultats (.jtl) à l'intérieur du conteneur
-                    // -e -o : génère le rapport HTML à l'intérieur du conteneur
-                    // -J : passe des propriétés à JMeter (utilisées dans le .jmx via ${__P(...)})
-                    //      JMeter ciblera le backend par son nom de service Docker (${SPRING_BOOT_APP_NAME})
-                    bat """
-                        wsl docker run --rm \\
-                        --name ${JMeter_CONTAINER_NAME} \\
-                        --network ${DOCKER_NETWORK_NAME} \\
-                        -v "${WORKSPACE}:${JMeter_WORKSPACE_CONTAINER}" \\
-                        justb4/jmeter:latest \\
-                        -n -t ${JMeter_WORKSPACE_CONTAINER}/${JMeter_TEST_PLAN_RELATIVE_PATH} \\
-                        -l ${Jeter_WORKSPACE_CONTAINER}/${JMeter_RESULTS_JTL} \\
-                        -e -o ${JMeter_WORKSPACE_CONTAINER}/${JMeter_REPORT_HTML_DIR} \\
-                        -Jusers=10 -Jramp_time=5 -Jduration=60 \\
-                        -Jhost=${SPRING_BOOT_APP_NAME} -Jport=8088 -Jpath=/api/attendance
-                    """
-                }
+                   bat "wsl docker run --rm --name \"${JMeter_CONTAINER_NAME}\" --network \"${DOCKER_NETWORK_NAME}\" -v \"${WORKSPACE}:${JMeter_WORKSPACE_CONTAINER}\" justb4/jmeter:latest -n -t \"${JMeter_WORKSPACE_CONTAINER}/${JMeter_TEST_PLAN_RELATIVE_PATH}\" -l \"${JMeter_WORKSPACE_CONTAINER}/${JMeter_RESULTS_JTL}\" -e -o \"${JMeter_WORKSPACE_CONTAINER}/${JMeter_REPORT_HTML_DIR}\" -Jusers=10 -Jramp_time=5 -Jduration=60 -Jhost=\"${SPRING_BOOT_APP_NAME}\" -Jport=8088 -Jpath=/api/attendance"                
             }
         }
 
@@ -160,8 +134,7 @@ pipeline {
                     // Vérifie que le dossier du rapport HTML existe avant de tenter de le publier
                     bat "IF NOT EXIST \"${WORKSPACE}\\${JMeter_REPORT_HTML_DIR}\" exit 1"
                 }
-                // Publie le rapport HTML généré par JMeter
-                // Nécessite le plugin "HTML Publisher" dans Jenkins
+ 
                 publishHTML(target: [
                     allowMissing: false,
                     alwaysLinkToLastBuild: false,
@@ -171,26 +144,25 @@ pipeline {
                     reportName: 'JMeter Performance Report',
                     reportTitles: 'JMeter Report'
                 ])
-                // Archive le fichier .jtl brut pour une analyse ultérieure
-                // Nécessite le plugin "Artifact Archiver"
                 archiveArtifacts artifacts: "${WORKSPACE}\\${JMeter_RESULTS_JTL}", fingerprint: true
             }
         }
     }
 
     // Actions post-build (s'exécutent après tous les stages)
-    post {
-        // S'assure que le backend Docker et le réseau sont nettoyés, même si le pipeline échoue
-        always {
-            echo 'Cleaning up Docker resources...'
-            // Arrête et supprime le conteneur du backend Spring Boot
-            // '|| true' permet à la commande de ne pas échouer si le conteneur n'existe pas
-            bat "wsl docker stop ${SPRING_BOOT_APP_NAME} || true"
-            bat "wsl docker rm ${SPRING_BOOT_APP_NAME} || true"
-            // Supprime le réseau Docker
-            bat "wsl docker network rm ${DOCKER_NETWORK_NAME} || true"
-            echo 'Docker cleanup complete.'
-        }
+   post {
+    // S'assure que le backend Docker et le réseau sont nettoyés, même si le pipeline échoue
+    always {
+        echo 'Cleaning up Docker resources...'
+        // Arrête et supprime le conteneur du backend Spring Boot
+        // '|| exit 0' permet à la commande de ne pas faire échouer l'étape Jenkins si le conteneur n'existe pas ou est déjà arrêté/supprimé
+        bat "wsl docker stop ${SPRING_BOOT_APP_NAME} || exit 0"
+        bat "wsl docker rm ${SPRING_BOOT_APP_NAME} || exit 0"
+        // Supprime le réseau Docker
+        bat "wsl docker network rm ${DOCKER_NETWORK_NAME} || exit 0"
+        echo 'Docker cleanup complete.'
+    }
+}
         success {
             echo '✅ Pipeline completed successfully!'
         }
