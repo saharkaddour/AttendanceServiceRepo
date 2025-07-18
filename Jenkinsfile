@@ -1,3 +1,7 @@
+Jenkins file:
+
+// This pipeline automates the build, test, and code quality analysis using Maven and SonarQube.
+
 pipeline {
     agent any
 
@@ -18,17 +22,21 @@ pipeline {
             }
         }
 
+       
         stage('Clean') {
             steps {
                 bat 'mvnw.cmd clean'
             }
         }
 
+
+        // Stage 3: Compile - Compiles the project source code.
         stage('Compile') {
             steps {
                 bat 'mvnw.cmd compile'
             }
         }
+
 
         stage('Code Quality (SonarQube)') {
             steps {
@@ -38,10 +46,12 @@ pipeline {
             }
         }
 
+       
         stage('Test') {
             steps {
                 bat 'mvnw.cmd test'
             }
+            
             post {
                 always {
                     junit '**/target/surefire-reports/TEST-*.xml'
@@ -50,25 +60,16 @@ pipeline {
             }
         }
 
+        // Stage 6: Package - Creates the executable JAR/WAR file.
         stage('Package') {
             steps {
                 bat 'mvnw.cmd package'
             }
         }
-
-        stage('Upload to Artifactory') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'artifactory-token', usernameVariable: 'ART_USER', passwordVariable: 'ART_PASS')]) {
-                    bat '''
-                        wsl jfrog rt config --url=http://localhost:8082/artifactory --user=jenkinsadmin --password=Sahar2001 --interactive=false
-                        wsl jfrog rt upload "target\\*.jar" "libs-release-local/attendance-service/"
-                    '''
-                }
-            }
-        }
     }
 
-    post {
+   
+    post {       
         success {
             echo '✅ Pipeline completed successfully!'
         }
