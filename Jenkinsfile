@@ -90,12 +90,12 @@ pipeline {
             steps {
                 try {
                     wsl.exe docker network create jmeter-test-network
-                } catch 
-                {
+                } 
+                catch {
                     if ($_.Exception.Message -like "*network with name jmeter-test-network already exists*") {
                         Write-Host "JMeter test network already exists. Continuing..."
-                    } else 
-                    {
+                    } 
+                    else {
                         throw $_
                     }
                 }        
