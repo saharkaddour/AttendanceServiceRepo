@@ -90,6 +90,7 @@ pipeline {
             steps {
                 wsl docker network create your-network-name-here         
             }
+        }
 
         stage('Start Spring Boot Backend in Docker') {
             steps {
