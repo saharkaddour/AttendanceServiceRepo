@@ -58,7 +58,7 @@ pipeline {
 
         stage('Upload to Artifactory') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'artifactory-token-creds', usernameVariable: 'ART_USER', passwordVariable: 'ART_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'artifactory-token', usernameVariable: 'ART_USER', passwordVariable: 'ART_PASS')]) {
                     bat '''
                         jfrog rt config --url=http://localhost:8082/artifactory --user=%ART_USER% --password=%ART_PASS% --interactive=false
                         jfrog rt upload "target\\*.jar" "libs-release-local/attendance-service/"
