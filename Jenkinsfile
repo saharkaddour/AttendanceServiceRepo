@@ -88,20 +88,8 @@ pipeline {
 
         stage('Setup Docker Network') {
             steps {
-
-                try {
-                    wsl.exe docker network create jmeter-test-network
-                    }
-                catch {
-                    if ($_.Exception.Message -like "*network with name jmeter-test-network already exists*") {
-                        Write-Host "JMeter test network already exists. Continuing..."
-                    }
-                    else {
-                        throw $_
-                    }
-                }
+                wsl docker network create your-network-name-here         
             }
-        }
 
         stage('Start Spring Boot Backend in Docker') {
             steps {
