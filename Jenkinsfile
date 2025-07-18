@@ -112,6 +112,7 @@ pipeline {
             steps {
                 script {
                    bat "wsl docker run --rm --name \"${JMeter_CONTAINER_NAME}\" --network \"${DOCKER_NETWORK_NAME}\" -v \"${WORKSPACE}:${JMeter_WORKSPACE_CONTAINER}\" justb4/jmeter:latest -n -t \"${JMeter_WORKSPACE_CONTAINER}/${JMeter_TEST_PLAN_RELATIVE_PATH}\" -l \"${JMeter_WORKSPACE_CONTAINER}/${JMeter_RESULTS_JTL}\" -e -o \"${JMeter_WORKSPACE_CONTAINER}/${JMeter_REPORT_HTML_DIR}\" -Jusers=10 -Jramp_time=5 -Jduration=60 -Jhost=\"${SPRING_BOOT_APP_NAME}\" -Jport=8088 -Jpath=/api/attendance"                
+                }
             }
         }
 
