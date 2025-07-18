@@ -1,5 +1,3 @@
-Jenkins file:
-
 // This pipeline automates the build, test, and code quality analysis using Maven and SonarQube.
 
 pipeline {
