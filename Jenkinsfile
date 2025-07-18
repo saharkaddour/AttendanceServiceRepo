@@ -88,7 +88,17 @@ pipeline {
 
         stage('Setup Docker Network') {
             steps {
-                wsl docker network create your-network-name-here         
+                try {
+                    wsl.exe docker network create jmeter-test-network
+                } catch 
+                {
+                    if ($_.Exception.Message -like "*network with name jmeter-test-network already exists*") {
+                        Write-Host "JMeter test network already exists. Continuing..."
+                    } else 
+                    {
+                        throw $_
+                    }
+                }        
             }
         }
 
