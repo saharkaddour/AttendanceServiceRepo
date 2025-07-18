@@ -1,5 +1,3 @@
-// This pipeline automates the build, test, and code quality analysis using Maven and SonarQube.
-
 pipeline {
     agent any
 
@@ -7,7 +5,6 @@ pipeline {
         maven "M3"
         git 'DefaultGit'
         jdk "JDK17"
-        jfrog "jfrogArtifactory"
     }
 
     environment {
@@ -21,21 +18,17 @@ pipeline {
             }
         }
 
-       
         stage('Clean') {
             steps {
                 bat 'mvnw.cmd clean'
             }
         }
 
-
-        // Stage 3: Compile - Compiles the project source code.
         stage('Compile') {
             steps {
                 bat 'mvnw.cmd compile'
             }
         }
-
 
         stage('Code Quality (SonarQube)') {
             steps {
@@ -45,12 +38,10 @@ pipeline {
             }
         }
 
-       
         stage('Test') {
             steps {
                 bat 'mvnw.cmd test'
             }
-            
             post {
                 always {
                     junit '**/target/surefire-reports/TEST-*.xml'
@@ -59,30 +50,25 @@ pipeline {
             }
         }
 
-        // Stage 6: Package - Creates the executable JAR/WAR file.
         stage('Package') {
             steps {
                 bat 'mvnw.cmd package'
             }
         }
 
-
-   stage('Upload to Artifactory') {
+        stage('Upload to Artifactory') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'artifactory-token-creds', usernameVariable: 'ART_USER', passwordVariable: 'ART_PASS')]) {
                     bat '''
-                        jfrog rt config --url=http://localhost:8082/ui/admin/repositories/remote/attendance-service-artifactory/ --user=jenkinsadmin --password=sahar2001 --interactive=false
-
+                        jfrog rt config --url=http://localhost:8082/artifactory --user=%ART_USER% --password=%ART_PASS% --interactive=false
                         jfrog rt upload "target\\*.jar" "libs-release-local/attendance-service/"
                     '''
                 }
             }
         }
     }
-    
 
-   
-    post {       
+    post {
         success {
             echo '✅ Pipeline completed successfully!'
         }
