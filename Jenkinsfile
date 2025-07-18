@@ -7,6 +7,7 @@ pipeline {
         maven "M3"
         git 'DefaultGit'
         jdk "JDK17"
+        jfrog "jfrogArtifactory"
     }
 
     environment {
@@ -64,7 +65,21 @@ pipeline {
                 bat 'mvnw.cmd package'
             }
         }
+
+
+   stage('Upload to Artifactory') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'artifactory-token-creds', usernameVariable: 'ART_USER', passwordVariable: 'ART_PASS')]) {
+                    bat '''
+                        jfrog rt config --url=http://localhost:8082/ui/admin/repositories/remote/attendance-service-artifactory/ --user=jenkinsadmin --password=sahar2001 --interactive=false
+
+                        jfrog rt upload "target\\*.jar" "libs-release-local/attendance-service/"
+                    '''
+                }
+            }
+        }
     }
+    
 
    
     post {       
